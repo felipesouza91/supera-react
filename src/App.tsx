@@ -1,27 +1,39 @@
-import "./app.css"
+import { useState } from "react";
+import "./app.css";
 function App() {
+
+  const [startDate, setStartDate] = useState();
+  const [endDate, setEndDate] = useState();
+  const [operatorName, setOperatorName] = useState();
+  const [data, setData] = useState([
+    { id: 1, data: new Date(), valencia: 30895.46, type: "depósito", nomeOperador: "" },
+    { id: 2, data: new Date(), valencia: 12.24, type: "Transferência Entrada", nomeOperador: "Fulano" },
+    { id: 3, data: new Date(), valencia: -500.50, type: "Transferência Saída", nomeOperador: "Sicrano" },
+    { id: 4, data: new Date(), valencia: -1234.00, type: "Saque", nomeOperador: "" },
+  ])
+
   return (
-    <main className="flex h-screen" >
-      <div className="flex flex-col mx-auto w-2/4 gap-5 justify-center" >
-        <form className="flex flex-col w-full justify-center gap-5">
-          <div className="flex justify-between ">
-            <div className="flex flex-col">
+    <main className="app-screen" >
+      <div className="app-screen__container" >
+        <form className="form-container">
+          <div className="form-container__inputs">
+            <div className="form-container__input_group">
               <label htmlFor="">Data de início</label>
-              <input className="border-2 border-gray-800 rounded-md h-11 p-3"/>
+              <input className="form-input" type="date" placeholder=""/>
             </div>
-            <div  className="flex flex-col">
+            <div  className="form-container__input_group">
               <label htmlFor="">Data de Fim</label>
-              <input className="border-2 border-gray-800 rounded-md h-11 p-3"/>
+              <input className="form-input" type="date"/>
             </div>
-            <div  className="flex flex-col">
+            <div  className="form-container__input_group">
               <label htmlFor="">Nome do Operador transacionado</label>
-              <input className="border-2 border-gray-800 rounded-md h-11 p-3"/>
+              <input className="form-input"/>
             </div>
           </div>
-          <button className="self-end border p-3 rounded-lg bg-slate-600 text-white hover:bg-slate-500" type="button">Pesquisar</button>
+          <button className="form-button" type="button">Pesquisar</button>
         </form>
-        <div className="flex flex-col justify-center items-center border dark:border-neutral-500 ">
-          <span className="py-3">Saldo total: R$ 50,00 Saldo no período: R$ 50,00</span>
+        <div className="table-container">
+          <span className="table-title">Saldo total: R$ 50,00 Saldo no período: R$ 50,00</span>
           <table className="min-w-full">
             <thead>
               <tr>
@@ -32,33 +44,22 @@ function App() {
               </tr>
             </thead>
             <tbody >
-              <tr >
-                <td>14/02/2019</td>
-                <td>R$ 30895,46</td>
-                <td>depósito</td>
-                <td></td>
-              </tr>
-              <tr>
-                <td>12/04/2019</td>
-                <td>R$ 12,24</td>
-                <td>Transferência Entrada</td>
-                <td>Fulano</td>
-              </tr>
-              <tr>
-                <td>11/06/2020</td>
-                <td>R$ -500,50</td>
-                <td>Transferência Saída</td>
-                <td>Sicrano</td>
-              </tr>
-              <tr>
-                <td>11/06/2020</td>
-                <td>R$ -1234,00</td>
-                <td>Saque</td>
-                <td></td>
-              </tr>
+              {data.map(item => (
+                <tr key={ item.id}>
+                  <td>{Intl.DateTimeFormat('pt-BR' ).format(item.data)}</td>
+                  <td>R$ {Intl.NumberFormat('pt-BR', {
+                  
+                  style: 'decimal',
+                  minimumFractionDigits: 2,
+                  
+                }).format(item.valencia)}</td>
+                  <td>{ item.type}</td>
+                  <td>{ item.nomeOperador}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
-          <div className="py-3 flex gap-3">
+          <div className="table-pagination-panel">
             <button>{"<<"}</button>
             <button>{"<"}</button>
             <button>1</button>
