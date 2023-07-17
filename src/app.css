@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+table, th, td {
+  @apply border dark:border-neutral-500 
+}
+
+td {
+  @apply pr-2
+}
