@@ -7,12 +7,13 @@ import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { api } from './api/api';
 import "./app.css";
+import Pagination from './components/Pagination';
 interface Conta {
   id: number;
   nomeResponsavel: string;
 }
 
-interface Transacao {
+interface Transferencia {
   id: 1
   dataTransferencia: Date;
   valor: number;
@@ -21,8 +22,11 @@ interface Transacao {
   conta: Conta
 }
 
-interface ResponseData {
-  content: Transacao[]
+interface PageContent {
+  content: Transferencia[]
+  totalPages: number
+  totalElements: number
+  size: number
 }
 
 const formSchema = yup.object({
@@ -40,34 +44,50 @@ const formSchema = yup.object({
 
 type FormSchema = yup.InferType<typeof formSchema>;
 
-function App() {
+ function App() {
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
   
   const [isLoading, setIsLoading] = useState(false);
-  const { register, handleSubmit,  formState: { isValid } } = useForm({
+  const { register, handleSubmit,  formState: { isValid } , getValues} = useForm({
     resolver: yupResolver(formSchema), 
     
   });
-  const [data, setData] = useState<Transacao[]>([])
-
+  const [data, setData] = useState<PageContent>({} as PageContent)
 
   function handleCloseMessage() {
     setErrorMessage(undefined)
   }
 
-  async function search({ contaId, dataFim, dataInicio, nomeOperador }: FormSchema) {
+   async function handleNextPage(page: number) {
+    const { contaId,dataFim,dataInicio,nomeOperador} = getValues()
+    await fetchData({ contaId,dataFim,dataInicio,nomeOperador}, page)
+  }
+  
+  async function handlePreviusPage(page: number) { 
+    const { contaId,dataFim,dataInicio,nomeOperador} = getValues()
+    await fetchData({ contaId,dataFim,dataInicio,nomeOperador}, page)
+  }
+
+   
+   
+   async function onSearch({ contaId, dataFim, dataInicio, nomeOperador }: FormSchema) {
+     await fetchData({ contaId, dataFim, dataInicio, nomeOperador })
+   }
+   
+   async function fetchData({ contaId, dataFim, dataInicio, nomeOperador }: FormSchema, page = 0) {
     try {
       setIsLoading(true)
       const dataInicioFormatada = dataInicio? dayjs(dataInicio).format("YYYY-MM-DD") : dataInicio
       const dataFimFormatada =  dataFim  ?  dayjs(dataFim).format("YYYY-MM-DD") : dataFim
-      const { data } = await api.get<ResponseData>(`/transferencias/${contaId}`, {
+      const { data } = await api.get<PageContent>(`/transferencias/${contaId}`, {
         params: {
           dataFim :dataFimFormatada,
           dataInicio: dataInicioFormatada,
-          nomeOperador
+          nomeOperador,
+          page: page
          }
        })
-      setData(data.content)
+      setData(data)
       setErrorMessage(undefined)
     } catch (error) {
       console.log(error);
@@ -77,11 +97,11 @@ function App() {
           return setErrorMessage(userMessage)
         }
       } 
-      setErrorMessage("Erro ao realizar consulta, contete o administrador")
+      setErrorMessage("Erro ao realizar consulta, tente novamente mais tarde ou entre em contato com o administrador")
     } finally {
       setIsLoading(false)
     }
-  }
+   }
   
   return (
     <main className="app-screen" >
@@ -92,7 +112,7 @@ function App() {
             <button onClick={handleCloseMessage}>&#10005;</button>
           </div>
         )}
-        <form className="form-container" onSubmit={handleSubmit(search)}>
+        <form className="form-container" onSubmit={handleSubmit(onSearch)}>
           <div className="form-container__inputs">
             <div className="form-container__input_group">
               <label htmlFor="">Id da Conta <span className='label-span'>*</span></label>
@@ -125,8 +145,8 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              {data.length > 0 ? (
-                data.map(item => (
+              {data.content ? (
+                data.content.map(item => (
                   <tr key={ item.id}>
                     <td>{Intl.DateTimeFormat('pt-BR' ).format(new Date(item.dataTransferencia))}</td>
                     <td>R$ {Intl.NumberFormat('pt-BR', {
@@ -146,15 +166,13 @@ function App() {
             </tbody>
             
           </table>
-          <div className="table-pagination-panel">
-            <button>{"<<"}</button>
-            <button>{"<"}</button>
-            <button>1</button>
-            <button>2</button>
-            <button>3</button>
-            <button>{">"}</button>
-            <button>{">>"}</button>
-          </div>
+          {data.content &&
+            <Pagination
+              totalPages={data.totalPages}
+              totalElements={data.totalElements}
+              size={data.size}
+              onNextPage={handleNextPage}
+              onPreviusPage={handlePreviusPage} />}
         </div>
       </div>
     </main>
