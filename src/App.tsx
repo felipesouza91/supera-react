@@ -1,37 +1,114 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+import { yupResolver } from '@hookform/resolvers/yup';
+import { AxiosError } from 'axios';
+import dayjs from 'dayjs';
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import * as yup from "yup";
+import { api } from './api/api';
 import "./app.css";
+interface Conta {
+  id: number;
+  nomeResponsavel: string;
+}
+
+interface Transacao {
+  id: 1
+  dataTransferencia: Date;
+  valor: number;
+  tipo: string;
+  nomeOperadorTransacao: string
+  conta: Conta
+}
+
+interface ResponseData {
+  content: Transacao[]
+}
+
+const formSchema = yup.object({
+  contaId: yup.string().required(),
+  dataInicio: yup.date()
+  .nullable()
+  .transform((curr, orig) => orig === '' ? null : curr),
+  dataFim: yup.date()
+  .nullable()
+  .transform((curr, orig) => orig === '' ? null : curr),
+  nomeOperador: yup.string().nullable().transform((_, value) => {
+    return value === "" ? null : value;
+  })
+})
+
+type FormSchema = yup.InferType<typeof formSchema>;
+
 function App() {
+  const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const { register, handleSubmit,  formState: { isValid } } = useForm({
+    resolver: yupResolver(formSchema), 
+    
+  });
+  const [data, setData] = useState<Transacao[]>([])
 
-  const [startDate, setStartDate] = useState();
-  const [endDate, setEndDate] = useState();
-  const [operatorName, setOperatorName] = useState();
-  const [data, setData] = useState([
-    { id: 1, data: new Date(), valencia: 30895.46, type: "depósito", nomeOperador: "" },
-    { id: 2, data: new Date(), valencia: 12.24, type: "Transferência Entrada", nomeOperador: "Fulano" },
-    { id: 3, data: new Date(), valencia: -500.50, type: "Transferência Saída", nomeOperador: "Sicrano" },
-    { id: 4, data: new Date(), valencia: -1234.00, type: "Saque", nomeOperador: "" },
-  ])
 
+  function handleCloseMessage() {
+    setErrorMessage(undefined)
+  }
+
+  async function search({ contaId, dataFim, dataInicio, nomeOperador }: FormSchema) {
+    try {
+      setIsLoading(true)
+      const dataInicioFormatada = dataInicio? dayjs(dataInicio).format("YYYY-MM-DD") : dataInicio
+      const dataFimFormatada =  dataFim  ?  dayjs(dataFim).format("YYYY-MM-DD") : dataFim
+      const { data } = await api.get<ResponseData>(`/transferencias/${contaId}`, {
+        params: {
+          dataFim :dataFimFormatada,
+          dataInicio: dataInicioFormatada,
+          nomeOperador
+         }
+       })
+      setData(data.content)
+      setErrorMessage(undefined)
+    } catch (error) {
+      if (error instanceof AxiosError && error.response?.status === 400) {
+        setErrorMessage(error.response.data.message)
+      }
+      setErrorMessage("Erro ao realizar consulta, contete o administrador")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+  
   return (
     <main className="app-screen" >
       <div className="app-screen__container" >
-        <form className="form-container">
+        {!!errorMessage && (
+          <div className='error-container'>
+            {errorMessage}
+            <button onClick={handleCloseMessage}>&#10005;</button>
+          </div>
+        )}
+        <form className="form-container" onSubmit={handleSubmit(search)}>
           <div className="form-container__inputs">
             <div className="form-container__input_group">
+              <label htmlFor="">Id da Conta <span className='label-span'>*</span></label>
+              <input className="form-input" {...register('contaId')} />
+            </div>
+            <div className="form-container__input_group">
               <label htmlFor="">Data de início</label>
-              <input className="form-input" type="date" placeholder=""/>
+              <input className="form-input" type="date" {...register("dataInicio")} />
             </div>
             <div  className="form-container__input_group">
               <label htmlFor="">Data de Fim</label>
-              <input className="form-input" type="date"/>
+              <input className="form-input" type="date" {...register("dataFim")}/>
             </div>
             <div  className="form-container__input_group">
-              <label htmlFor="">Nome do Operador transacionado</label>
-              <input className="form-input"/>
+              <label htmlFor="">Nome Operador transacionado</label>
+              <input className="form-input" {...register("nomeOperador")}/>
             </div>
           </div>
-          <button className="form-button" type="button">Pesquisar</button>
-        </form>
+          <button className="form-button" type="submit" disabled={!isValid || isLoading}>{ isLoading? "Carregando": "Pesquisar"}</button>
+        </form> 
         <div className="table-container">
           <span className="table-title">Saldo total: R$ 50,00 Saldo no período: R$ 50,00</span>
           <table className="min-w-full">
@@ -43,21 +120,27 @@ function App() {
                 <th>Nome do operador transacionado</th>
               </tr>
             </thead>
-            <tbody >
-              {data.map(item => (
-                <tr key={ item.id}>
-                  <td>{Intl.DateTimeFormat('pt-BR' ).format(item.data)}</td>
-                  <td>R$ {Intl.NumberFormat('pt-BR', {
-                  
-                  style: 'decimal',
-                  minimumFractionDigits: 2,
-                  
-                }).format(item.valencia)}</td>
-                  <td>{ item.type}</td>
-                  <td>{ item.nomeOperador}</td>
-                </tr>
-              ))}
+            <tbody>
+              {data.length > 0 ? (
+                data.map(item => (
+                  <tr key={ item.id}>
+                    <td>{Intl.DateTimeFormat('pt-BR' ).format(new Date(item.dataTransferencia))}</td>
+                    <td>R$ {Intl.NumberFormat('pt-BR', {
+                    
+                    style: 'decimal',
+                    minimumFractionDigits: 2,
+                    
+                  }).format(item.valor)}</td>
+                    <td>{ item.tipo}</td>
+                    <td>{ item.nomeOperadorTransacao}</td>
+                  </tr>
+                  )
+                )
+              ) : (<tr >
+                <td className='text-center' colSpan={4}>Nenhum resultado encontrado.</td>
+              </tr>)}
             </tbody>
+            
           </table>
           <div className="table-pagination-panel">
             <button>{"<<"}</button>
