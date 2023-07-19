@@ -70,9 +70,13 @@ function App() {
       setData(data.content)
       setErrorMessage(undefined)
     } catch (error) {
-      if (error instanceof AxiosError && error.response?.status === 400) {
-        setErrorMessage(error.response.data.message)
-      }
+      console.log(error);
+      if (error instanceof AxiosError && error.response) {
+        if ((error.response?.status >= 400 && error.response?.status <= 499)) {
+          const { userMessage  }  = error.response.data as { userMessage: string }
+          return setErrorMessage(userMessage)
+        }
+      } 
       setErrorMessage("Erro ao realizar consulta, contete o administrador")
     } finally {
       setIsLoading(false)
