@@ -13,17 +13,17 @@ Desafio do processo seletivo FullStack Java-React
 
 #### Example:  
 
-Clone down this repository. You will need `node` and `npm` installed globally on your machine.  
+Clone o repositório. Você vai precisar do `node` e `npm` instalado na sua maquina.
 
-Installation:
+Instalação:
 
 `npm install`  
 
 
-To Start Server:
+Para iniciar Servidor:
 
 `npm run dev`  
 
-To Visit App:
+Para acessar o aplicativo:
 
 `localhost:3000`  
