@@ -46,14 +46,24 @@ type FormSchema = yup.InferType<typeof formSchema>;
 
  function App() {
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
-  
+   const [totalAmount, setTotalAmount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const { register, handleSubmit,  formState: { isValid } , getValues} = useForm({
     resolver: yupResolver(formSchema), 
     
   });
   const [data, setData] = useState<PageContent>({} as PageContent)
-
+  const formatedTotalAmount = Intl.NumberFormat('pt-BR', {
+    style: 'decimal',
+    minimumFractionDigits: 2,
+  }).format(totalAmount)
+  const periodAmount = data.content ? data.content.reduce((total, item) => total += item.valor , 0) : 0
+  const formatedPeriodAmount =Intl.NumberFormat('pt-BR', {
+    style: 'decimal',
+    minimumFractionDigits: 2,
+  }).format(periodAmount) 
+   
+   
   function handleCloseMessage() {
     setErrorMessage(undefined)
   }
@@ -68,8 +78,6 @@ type FormSchema = yup.InferType<typeof formSchema>;
     await fetchData({ contaId,dataFim,dataInicio,nomeOperador}, page)
   }
 
-   
-   
    async function onSearch({ contaId, dataFim, dataInicio, nomeOperador }: FormSchema) {
      await fetchData({ contaId, dataFim, dataInicio, nomeOperador })
    }
@@ -86,7 +94,9 @@ type FormSchema = yup.InferType<typeof formSchema>;
           nomeOperador,
           page: page
          }
-       })
+      })
+      const { data: amountData } = await api.get<{amout: number}>(`/transferencias/${contaId}/total-amount`);
+      setTotalAmount(amountData.amout)
       setData(data)
       setErrorMessage(undefined)
     } catch (error) {
@@ -134,7 +144,7 @@ type FormSchema = yup.InferType<typeof formSchema>;
           <button className="form-button" type="submit" disabled={!isValid || isLoading}>{ isLoading? "Carregando": "Pesquisar"}</button>
         </form> 
         <div className="table-container">
-          <span className="table-title">Saldo total: R$ 50,00 Saldo no período: R$ 50,00</span>
+          <span className="table-title">Saldo total: R$ {formatedTotalAmount} | Saldo no período: R$ {formatedPeriodAmount}</span>
           <table className="min-w-full">
             <thead>
               <tr>
@@ -150,10 +160,8 @@ type FormSchema = yup.InferType<typeof formSchema>;
                   <tr key={ item.id}>
                     <td>{Intl.DateTimeFormat('pt-BR' ).format(new Date(item.dataTransferencia))}</td>
                     <td>R$ {Intl.NumberFormat('pt-BR', {
-                    
                     style: 'decimal',
                     minimumFractionDigits: 2,
-                    
                   }).format(item.valor)}</td>
                     <td>{ item.tipo}</td>
                     <td>{ item.nomeOperadorTransacao}</td>
